@@ -38,11 +38,11 @@ The command line tool will output a ASCII based table describing the instance ty
 |      1 | r3.8xlarge  |    32 | 2.5 GHz   |    244.0 | 10 Gigabit | SSD     | 640 GB  | $2.66 ($2.66 each) | $0.60 ($0.60 each) | 78%        |
 |      1 | cr1.8xlarge |    32 |           |    244.0 | 10 Gigabit | SSD     | 240 GB  | $3.50 ($3.50 each) | $0.57 ($0.57 each) | 84%        |
 |      1 | d2.8xlarge  |    36 | 2.4 GHz   |    244.0 | 10 Gigabit | HDD     | 8000 GB | $5.52 ($5.52 each) | $0.76 ($0.76 each) | 86%        |
-|      1 | i2.8xlarge  |    32 | 2.5 GHz   |    244.0 | 10 Gigabit | SSD     | 6400 GB | $6.82 ($6.82 each) | $0.75 ($0.75 each) | 89%        |
+|      1 | 2.8xlarge  |    32 | 2.5 GHz   |    244.0 | 10 Gigabit | SSD     | 6400 GB | $6.82 ($6.82 each) | $0.75 ($0.75 each) | 89%        |
 +--------+-------------+-------+-----------+----------+------------+---------+---------+--------------------+--------------------+------------+
 ```
 
-# Examples
+# Example Usage
 
 Find linux based ec2 instances with over 8GB ram and at least 4 VCPU's
 ```
