@@ -13,6 +13,8 @@ Pre compiled binaries are available for Mac, Linux and Windows. Please see downl
 
 [Windows Download] (https://s3-us-west-2.amazonaws.com/andy-gen/ec2FleetCompare/win/ec2FleetCompare.exe) - (md5 375657fec1b332c2343dc41668e4aa65)
 
+Note: you may need to make executable i.e ```chmod 500 ./ec2FleetCompare``` or similiar for windows.
+
 # Usage
 
 To view help / option information. All options have defaults, the various options over-ride them.
