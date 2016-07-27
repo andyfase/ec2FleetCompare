@@ -22,6 +22,25 @@ To view help / option information. All options have defaults, the various option
 ```
 ./ec2FleetCompare --help
 ```
+# Output
+
+The command line tool will output a ASCII based table describing the instance types (and number of them if using for a fleet) that fulfil your criteria. This is sorted by default by on-demand pricing but can also be sorted via spot pricing too
+
+```
++--------+-------------+-------+-----------+----------+------------+---------+---------+--------------------+--------------------+------------+
+| # INST |    TYPE     | VCPUS | VCPU FREQ | MEM/INST |  NETWORK   | IS TYPE | IS SIZE |   DEMAND $/HOUR    |    SPOT $/HOUR     | SPOT % SAV |
++--------+-------------+-------+-----------+----------+------------+---------+---------+--------------------+--------------------+------------+
+|      1 | c4.8xlarge  |    36 | 2.9 GHz   |     60.0 | 10 Gigabit | N/A     | N/A     | $1.68 ($1.68 each) | $0.34 ($0.34 each) | 80%        |
+|      1 | c3.8xlarge  |    32 | 2.8 GHz   |     60.0 | 10 Gigabit | SSD     | 640 GB  | $1.68 ($1.68 each) | $0.36 ($0.36 each) | 79%        |
+|      1 | cc2.8xlarge |    32 | 2.6 GHz   |     60.5 | 10 Gigabit | HDD     | 3360 GB | $2.00 ($2.00 each) | $0.28 ($0.28 each) | 86%        |
+|      1 | m4.10xlarge |    40 | 2.4 GHz   |    160.0 | 10 Gigabit | N/A     | N/A     | $2.39 ($2.39 each) | $0.45 ($0.45 each) | 81%        |
+|      1 | g2.8xlarge  |    32 | 2.6 GHz   |     60.0 | 10 Gigabit | SSD     | 240 GB  | $2.60 ($2.60 each) | $2.80 ($2.80 each) | -8%        |
+|      1 | r3.8xlarge  |    32 | 2.5 GHz   |    244.0 | 10 Gigabit | SSD     | 640 GB  | $2.66 ($2.66 each) | $0.60 ($0.60 each) | 78%        |
+|      1 | cr1.8xlarge |    32 |           |    244.0 | 10 Gigabit | SSD     | 240 GB  | $3.50 ($3.50 each) | $0.57 ($0.57 each) | 84%        |
+|      1 | d2.8xlarge  |    36 | 2.4 GHz   |    244.0 | 10 Gigabit | HDD     | 8000 GB | $5.52 ($5.52 each) | $0.76 ($0.76 each) | 86%        |
+|      1 | i2.8xlarge  |    32 | 2.5 GHz   |    244.0 | 10 Gigabit | SSD     | 6400 GB | $6.82 ($6.82 each) | $0.75 ($0.75 each) | 89%        |
++--------+-------------+-------+-----------+----------+------------+---------+---------+--------------------+--------------------+------------+
+```
 
 # Examples
 
