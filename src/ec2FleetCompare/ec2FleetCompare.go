@@ -548,7 +548,7 @@ func doDisplay (output FilteredResults, outputSize int) {
 		i++
 	}
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"# Instances", "Type", "VCPU/inst", "VCPU Freq", "Mem/inst", "Network", "IS Disk Type", "IS Disk Size", "Demand $/Hour total(each)", "Spot $/Hour total(each)", "Spot % Saving"})
+	table.SetHeader([]string{"# Inst", "Type", "VCPUs", "VCPU Freq", "Mem/inst", "Network", "IS Type", "IS Size", "Demand $/Hour", "Spot $/Hour", "Spot % Sav"})
 	table.SetBorder(true)                                // Set Border to false
 	table.AppendBulk(data)                                // Add Bulk Data
 	table.Render()
