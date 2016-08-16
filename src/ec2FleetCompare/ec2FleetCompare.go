@@ -105,11 +105,7 @@ func (slice FilteredResults) Len() int {
 }
 
 func (slice FilteredResults) Less(i, j int) bool {
-	if slice[i].TotalPrice > 0 {
   	return slice[i].TotalPrice < slice[j].TotalPrice
-	}	else {
-		return false
-	}
 }
 
 func (slice FilteredResults) Swap(i, j int) {
@@ -271,12 +267,14 @@ func downloadDemandPrices (ec2 *Ec2) error {
 			}
 		}
 
-
 		i.DemandPrice, _ 							= strconv.ParseFloat(prices[0][4],64)
 		i.Reserve1YPartialPrice, _ 		= strconv.ParseFloat(prices[1][4],64)
 		i.Reserve1YPartialUpfront, _ 	= strconv.ParseFloat(prices[2][4],64)
 		i.Reserve1YZeroPrice, _  			= strconv.ParseFloat(prices[3][4],64)
 		i.Reserve1YFullUpfront, _ 		= strconv.ParseFloat(prices[4][4],64)
+
+		// set fake spot price which should get over-set
+		i.SpotPrice = 999999.9
 
 		ec2.Instance = append(ec2.Instance, i)
 	}
@@ -441,7 +439,7 @@ func roundUp(val float64) int {
     return int(val)
 }
 
-func doFilter(ec2 Ec2, region string, instanceCount int, minCPU int, minFleetCPU int, minMem int, minFleetMem int, minDisk string, diskType string, minNetworkType int, operatingSystem string, instanceType string, sort string) FilteredResults {
+func doFilter(ec2 Ec2, region string, instanceCount int, minCPU int, minFleetCPU int, minMem int, minFleetMem int, minDisk int, diskType string, minNetworkType int, operatingSystem string, instanceType string, sort string) FilteredResults {
 
 	var output FilteredResults
 
@@ -464,6 +462,9 @@ func doFilter(ec2 Ec2, region string, instanceCount int, minCPU int, minFleetCPU
 			continue
 		}
 		if diskType != "ANY" && diskType != ec2.Instance[i].Specs.DiskType {
+			continue
+		}
+		if minDisk > ec2.Instance[i].Specs.DiskSize {
 			continue
 		}
 		if minCPU > ec2.Instance[i].Specs.Cpu || minFleetCPU > (ec2.Instance[i].Specs.Cpu * instanceCount)  {
@@ -536,7 +537,7 @@ func doDisplay (output FilteredResults, outputSize int) {
 			"$" + strconv.FormatFloat(spotPrice, 'f', 2, 64) + " ($" + strconv.FormatFloat(s.Instance.SpotPrice, 'f', 2, 64) + " each)",
 			strconv.FormatFloat(spotSaving, 'f', 0, 64) + "%",
 		}
-		if spotPrice < 0.000001 {
+		if s.Instance.SpotPrice == 999999.9 {
 			result[9] = "N/A"
 			result[10] = "N/A"
 		}
@@ -564,8 +565,8 @@ func main() {
 	app.Usage = "Use this app to find the cheapest price for a single or set of EC2 instances given your CPU, memory or network requirements. \n\tGiven a minimum or maximum fleet size and the required resources across the fleet this app will find the cheapest EC2 instances that will fulfil your requirements."
 	app.Version = "1.0.0"
 
-	var minNetwork, region, minDisk, diskType, operatingSystem, sort, instanceType string
-	var instancCount, minCPU, minFleetCPU, minMem, minFleetMem, outputSize int
+	var minNetwork, region, diskType, operatingSystem, sort, instanceType string
+	var instancCount, minCPU, minDisk, minFleetCPU, minMem, minFleetMem, outputSize int
 	var forceDownload, ignoreSpot, skipDownload bool
 	app.Flags = []cli.Flag{
 		cli.IntFlag{
@@ -616,9 +617,9 @@ func main() {
 			Usage:       "Minimum network speed required per instance, options: low, medium, high, gbit",
 			Destination: &minNetwork,
 		},
-		cli.StringFlag{
+		cli.IntFlag{
 			Name:        "disk, d",
-			Value:       "0",
+			Value:       0,
 			Usage:       "Minimum instance store disk space required (in GiB) per instance",
 			Destination: &minDisk,
 		},
