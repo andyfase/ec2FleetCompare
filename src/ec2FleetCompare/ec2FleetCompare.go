@@ -595,7 +595,7 @@ func main() {
 		},
 		cli.IntFlag{
 			Name:        "mem, m",
-			Value:       4,
+			Value:       2,
 			Usage:       "Minimum memoy (in GiB) required per instance",
 			Destination: &minMem,
 		},
@@ -607,7 +607,7 @@ func main() {
 		},
 		cli.IntFlag{
 			Name:        "fleetmem, fm",
-			Value:       4,
+			Value:       2,
 			Usage:       "Minimum memoy (in GiB) required across fleet",
 			Destination: &minFleetMem,
 		},
