@@ -3,7 +3,7 @@ Is a small / fast command-line tool which determine the instance types that fulf
 
 ec2FleetCompare supports on-demand, spot and all variations of RI prices. Sorting of the output defaults to on-demand but can be changed via command-line parameter.
 
-ec2FleetCompare can be used to look at cost comparisons on individual instances or a fixed number or instances but can also be used to find the cheapest options for a "fleet" of ec2 instances. As long as you know the total number of VCPS's or GB's or ram required across an entire fleet the tool will provide you the cheapest option to achieve this. This is especially useful when setting up a cluster of worked nodes on a ECS, Kubernetes or Mesos cluster for example.
+ec2FleetCompare can be used to look at cost comparisons on individual instances or a fixed number or instances but can also be used to find the cheapest options for a "fleet" of ec2 instances. As long as you know the total number of VCPS's or GB's or ram required across an entire fleet the tool will provide you the cheapest option to achieve this. This is especially useful when setting up a cluster of worker nodes on a ECS, Kubernetes or Mesos cluster for example.
 
 # Download
 
