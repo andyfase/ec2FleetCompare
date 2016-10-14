@@ -5,6 +5,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/mitchellh/go-homedir"
 	"github.com/olekukonko/tablewriter"
+	"github.com/dustin/go-humanize"
 	"time"
 	"net/http"
 	"os"
@@ -85,6 +86,9 @@ type Instance struct {
 	Reserve1YPartialUpfront float64
 	Reserve1YZeroPrice 			float64
 	Reserve1YFullUpfront 		float64
+	Reserve3YPartialPrice 	float64
+	Reserve3YPartialUpfront float64
+	Reserve3YFullUpfront 		float64
 	SpotPrice 							float64
 }
 
@@ -94,7 +98,10 @@ type Ec2 struct {
 
 type Ec2Filtered struct {
 	NumberInstances		int
-	TotalPrice				float64
+	SortPrice					float64
+	TotalPriceDemand	float64
+	TotalPriceRI			float64
+	TotalPriceSpot		float64
 	Instance					Instance
 }
 
@@ -105,7 +112,7 @@ func (slice FilteredResults) Len() int {
 }
 
 func (slice FilteredResults) Less(i, j int) bool {
-  	return slice[i].TotalPrice < slice[j].TotalPrice
+  	return slice[i].SortPrice < slice[j].SortPrice
 }
 
 func (slice FilteredResults) Swap(i, j int) {
@@ -252,6 +259,9 @@ func downloadDemandPrices (ec2 *Ec2) error {
 			{"reservedPartial1YearUpfront"	, "Reserved", ".HU7G6KETJZ", ".HU7G6KETJZ.2TG2D8R56U", ""},
 			{"reservedZero1Year"						, "Reserved", ".4NA7Y494T4", ".4NA7Y494T4.6YS6EN2CT7", ""},
 			{"reservedFull1YearUpfront"			, "Reserved", ".6QCMYABX3D", ".6QCMYABX3D.2TG2D8R56U", ""},
+			{"reservedPartial3Year"					, "Reserved", ".38NPMPTW36", ".38NPMPTW36.6YS6EN2CT7", ""},
+			{"reservedPartial3YearUpfront"	, "Reserved", ".38NPMPTW36", ".38NPMPTW36.2TG2D8R56U", ""},
+			{"reservedPFull3YearUpFront"		, "Reserved", ".NQ3QZPMQV9", ".NQ3QZPMQV9.2TG2D8R56U", ""},
 		}
 
 		for row := range prices {
@@ -272,6 +282,10 @@ func downloadDemandPrices (ec2 *Ec2) error {
 		i.Reserve1YPartialUpfront, _ 	= strconv.ParseFloat(prices[2][4],64)
 		i.Reserve1YZeroPrice, _  			= strconv.ParseFloat(prices[3][4],64)
 		i.Reserve1YFullUpfront, _ 		= strconv.ParseFloat(prices[4][4],64)
+		i.Reserve3YPartialPrice, _		= strconv.ParseFloat(prices[5][4],64)
+		i.Reserve3YPartialUpfront,_		= strconv.ParseFloat(prices[6][4],64)
+		i.Reserve3YFullUpfront,_			= strconv.ParseFloat(prices[7][4],64)
+
 
 		// set fake spot price which should get over-set
 		i.SpotPrice = 999999.9
@@ -435,11 +449,11 @@ func getPrices(s *Ec2, forceDownload bool, ignoreSpot bool, skipDownload bool) e
 }
 
 func roundUp(val float64) int {
-    if val > 0 { return int(val+1.0) }
+    if val > 0 { return int(val+0.999999) }
     return int(val)
 }
 
-func doFilter(ec2 Ec2, region string, instanceCount int, minCPU int, minFleetCPU int, minMem int, minFleetMem int, minDisk int, diskType string, minNetworkType int, operatingSystem string, instanceType string, sort string) FilteredResults {
+func doFilter(ec2 Ec2, region string, instanceCount int, minInstanceCount int, minCPU int, minFleetCPU int, minMem int, minFleetMem int, minDisk int, diskType string, minNetworkType int, operatingSystem string, instanceType string, riType string, sort string) FilteredResults {
 
 	var output FilteredResults
 
@@ -467,17 +481,16 @@ func doFilter(ec2 Ec2, region string, instanceCount int, minCPU int, minFleetCPU
 		if minDisk > ec2.Instance[i].Specs.DiskSize {
 			continue
 		}
-		if minCPU > ec2.Instance[i].Specs.Cpu || minFleetCPU > (ec2.Instance[i].Specs.Cpu * instanceCount)  {
+		if minCPU > ec2.Instance[i].Specs.Cpu   {
 			continue
 		}
-		if minMem > int(ec2.Instance[i].Specs.Mem) || minFleetMem > ( int(ec2.Instance[i].Specs.Mem) * instanceCount) {
+		if minMem > int(ec2.Instance[i].Specs.Mem) {
 			continue
 		}
 
-		var sortPrice float64
 		var numServers int
 		// sort prices will be whatever the sort prices set * num instances required (biggest to meet either mem or cpu limits)
-		if (instanceCount > 1) {
+		if (instanceCount == 1) {
 			if (float64(minFleetMem) / ec2.Instance[i].Specs.Mem) > float64(minFleetCPU / ec2.Instance[i].Specs.Cpu) {
 				numServers = roundUp(float64(minFleetMem) / ec2.Instance[i].Specs.Mem)
 			} else {
@@ -487,21 +500,58 @@ func doFilter(ec2 Ec2, region string, instanceCount int, minCPU int, minFleetCPU
 				numServers = 1
 			}
 		} else {
-			numServers = 1
+			numServers = instanceCount
 		}
-		switch sort {
-			case `demand`:
-				sortPrice = ec2.Instance[i].DemandPrice * float64(numServers)
-			case `spot`:
-						sortPrice = ec2.Instance[i].SpotPrice * float64(numServers)
-			default:
-				sortPrice = ec2.Instance[i].DemandPrice * float64(numServers)
+
+		if numServers < minInstanceCount {
+			continue
+		}
+
+		var riPrice, riMonCost float64
+		switch riType {
+		case `zero1`:
+			riPrice = ec2.Instance[i].Reserve1YZeroPrice * float64(numServers)
+			riMonCost = 0
+		case `partial1`:
+			riPrice = ec2.Instance[i].Reserve1YPartialPrice * float64(numServers)
+			riMonCost = (ec2.Instance[i].Reserve1YPartialUpfront / 12) * float64(numServers)
+		case `partial3`:
+			riPrice = ec2.Instance[i].Reserve3YPartialPrice * float64(numServers)
+			riMonCost = (ec2.Instance[i].Reserve3YPartialUpfront / 36) * float64(numServers)
+		case `full1`:
+			riPrice = 0
+			riMonCost = (ec2.Instance[i].Reserve1YFullUpfront / 12) * float64(numServers)
+		case `full3`:
+			riPrice = 0
+			riMonCost = (ec2.Instance[i].Reserve1YFullUpfront / 36) * float64(numServers)
+		default:
+			riPrice = ec2.Instance[i].Reserve1YZeroPrice * float64(numServers)
+			riMonCost = 0
 		}
 
 		var instance Ec2Filtered
 		instance.NumberInstances 	= numServers
-		instance.TotalPrice 			= sortPrice
 		instance.Instance 				= ec2.Instance[i]
+
+		// calculate monthly costs for demand, spot and choosen RI
+		instance.TotalPriceDemand = ec2.Instance[i].DemandPrice * float64(numServers) * 24 * 30
+		instance.TotalPriceSpot   = ec2.Instance[i].SpotPrice * float64(numServers) * 24 * 30
+		instance.TotalPriceRI     = (riPrice * 24 * 30) + riMonCost
+
+		if instance.TotalPriceRI == 0 {
+			instance.TotalPriceRI = 999999999.999999
+		}
+
+		switch sort {
+			case `demand`:
+				instance.SortPrice = instance.TotalPriceDemand
+			case `spot`:
+				instance.SortPrice = instance.TotalPriceSpot
+			case `ri`:
+				instance.SortPrice = instance.TotalPriceRI
+			default:
+				instance.SortPrice = instance.TotalPriceDemand
+		}
 
 		output = append(output, instance)
 	}
@@ -520,9 +570,16 @@ func doDisplay (output FilteredResults, outputSize int) {
 		if (i > outputSize) {
 			break
 		}
-		demandPrice := s.Instance.DemandPrice * float64(s.NumberInstances)
-		spotPrice   := s.Instance.SpotPrice * float64(s.NumberInstances)
-		spotSaving	:= (((demandPrice - spotPrice)/demandPrice) * 100)
+
+		spotSaving	:= (((s.TotalPriceDemand - s.TotalPriceSpot)/s.TotalPriceDemand) * 100)
+
+		demandString := "$" + strconv.FormatFloat(s.Instance.DemandPrice * float64(s.NumberInstances), 'f', 2, 64)
+		spotString := "$" + strconv.FormatFloat(s.Instance.SpotPrice * float64(s.NumberInstances), 'f', 2, 64)
+
+		if s.NumberInstances > 1 {
+			demandString = demandString + " ($" + strconv.FormatFloat(s.Instance.DemandPrice, 'f', 2, 64) + " ea)"
+			spotString = spotString + " ($" + strconv.FormatFloat(s.Instance.SpotPrice, 'f', 2, 64) + " ea)"
+		}
 
 		result := []string{
 			strconv.FormatInt(int64(s.NumberInstances), 10),
@@ -533,23 +590,31 @@ func doDisplay (output FilteredResults, outputSize int) {
 			s.Instance.Specs.NetworkDesc,
 			s.Instance.Specs.DiskType,
 			strconv.FormatInt(int64(s.Instance.Specs.DiskSize), 10) + " GB",
-			"$" + strconv.FormatFloat(demandPrice, 'f', 2, 64) + " ($" + strconv.FormatFloat(s.Instance.DemandPrice, 'f', 2, 64) + " each)",
-			"$" + strconv.FormatFloat(spotPrice, 'f', 2, 64) + " ($" + strconv.FormatFloat(s.Instance.SpotPrice, 'f', 2, 64) + " each)",
+			demandString,
+			spotString,
 			strconv.FormatFloat(spotSaving, 'f', 0, 64) + "%",
+			"$" +   humanize.Comma(int64(s.TotalPriceDemand)),
+			"$" + 	humanize.Comma(int64(s.TotalPriceRI)),
+			"$" + 	humanize.Comma(int64(s.TotalPriceSpot)),
 		}
 		if s.Instance.SpotPrice == 999999.9 {
 			result[9] = "N/A"
 			result[10] = "N/A"
+			result[13] = "N/A"
 		}
 		if s.Instance.Specs.DiskSize == 0 {
 			result[6] = "N/A"
 			result[7] = "N/A"
 		}
+		if s.TotalPriceRI == 999999999.999999 {
+			result[12] = "N/A"
+		}
+
 		data = append(data, result)
 		i++
 	}
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"# Inst", "Type", "VCPUs", "VCPU Freq", "Mem/inst", "Network", "IS Type", "IS Size", "Demand $/Hour", "Spot $/Hour", "Spot % Sav"})
+	table.SetHeader([]string{"# Inst", "Type", "VCPU", "VCPU Freq", "Mem", "Network", "IS Type", "IS Size", "Demand/Hour", "Spot/Hour", "Spot Sav", "Demand/Mon", "RI/Mon", "Spot/Mon"})
 	table.SetBorder(true)                                // Set Border to false
 	table.AppendBulk(data)                                // Add Bulk Data
 	table.Render()
@@ -565,15 +630,21 @@ func main() {
 	app.Usage = "Use this app to find the cheapest price for a single or set of EC2 instances given your CPU, memory or network requirements. \n\tGiven a minimum or maximum fleet size and the required resources across the fleet this app will find the cheapest EC2 instances that will fulfil your requirements."
 	app.Version = "1.0.0"
 
-	var minNetwork, region, diskType, operatingSystem, sort, instanceType string
-	var instancCount, minCPU, minDisk, minFleetCPU, minMem, minFleetMem, outputSize int
+	var minNetwork, region, diskType, operatingSystem, sort, instanceType, riType string
+	var instanceCount,  minInstanceCount, minCPU, minDisk, minFleetCPU, minMem, minFleetMem, outputSize int
 	var forceDownload, ignoreSpot, skipDownload bool
 	app.Flags = []cli.Flag{
 		cli.IntFlag{
 			Name:        "num, n",
 			Value:       1,
-			Usage:       "Maximum number of instances required in fleet",
-			Destination: &instancCount,
+			Usage:       "Number of instances required in fleet - leave at default unless you have specfic requirements for X instances",
+			Destination: &instanceCount,
+		},
+		cli.IntFlag{
+			Name:        "min, mn",
+			Value:       1,
+			Usage:       "Minimum number of instances required in fleet",
+			Destination: &minInstanceCount,
 		},
 		cli.StringFlag{
 			Name:        "region, r",
@@ -638,7 +709,7 @@ func main() {
 		cli.StringFlag{
 			Name:        "sort, s",
 			Value:       "demand",
-			Usage:       "Sort choice (always low to high), options: demand, spot",
+			Usage:       "Sort choice (always low to high), options: demand, spot, ri",
 			Destination: &sort,
 		},
 		cli.BoolFlag{
@@ -657,6 +728,12 @@ func main() {
 			Usage:       "Max number of output lines",
 			Destination: &outputSize,
 		},
+		cli.StringFlag{
+			Name:        "riType, ri",
+			Value:       "partial1",
+			Usage:       "Type of RI type to display, options: zero1, partial1, partial3, full1, full3",
+			Destination: &riType,
+		},
 	}
 	app.Action = func(c *cli.Context) error {
 			var prices Ec2
@@ -671,7 +748,7 @@ func main() {
 			operatingSystem = strings.ToUpper(operatingSystem)
 			instanceType    = strings.ToUpper(instanceType)
 
-			filtered := doFilter(prices, region, instancCount, minCPU, minFleetCPU, minMem, minFleetMem, minDisk, diskType, minNetworkType, operatingSystem, instanceType, sort)
+			filtered := doFilter(prices, region, instanceCount, minInstanceCount, minCPU, minFleetCPU, minMem, minFleetMem, minDisk, diskType, minNetworkType, operatingSystem, instanceType, riType, sort)
 			doDisplay(filtered, outputSize)
 			return nil
 	}
