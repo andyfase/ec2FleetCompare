@@ -7,11 +7,11 @@ ec2FleetCompare can be used to look at cost comparisons on individual instance c
 
 Pre compiled binaries are available for Mac, Linux and Windows. Please see download links below:
 
-[Linux Download] (https://s3-us-west-2.amazonaws.com/andy-gen/ec2FleetCompare/linux/ec2FleetCompare)  - (md5 a5547c2fbd070a653f643c7adc8487b8)
+[Linux Download] (https://s3-us-west-2.amazonaws.com/andy-gen/ec2FleetCompare/linux/ec2FleetCompare)  - (md5 c928053ef07bca2849001e5b8165d1bc)
 
-[Mac Download] (https://s3-us-west-2.amazonaws.com/andy-gen/ec2FleetCompare/osx/ec2FleetCompare) - (md5 aede3be60ec614188a8e84c35a508e17) 
+[Mac Download] (https://s3-us-west-2.amazonaws.com/andy-gen/ec2FleetCompare/osx/ec2FleetCompare) - (md5 a0fe0603308069db4ebc376f0e2fa7db) 
 
-[Windows Download] (https://s3-us-west-2.amazonaws.com/andy-gen/ec2FleetCompare/win/ec2FleetCompare.exe) - (md5 eeeb31a2a537dfb89d6e42dbd81de2f2)
+[Windows Download] (https://s3-us-west-2.amazonaws.com/andy-gen/ec2FleetCompare/win/ec2FleetCompare.exe) - (md5 d165157d7235c76bf7162f493051e7c8)
 
 Note: you may need to make executable i.e ```chmod 500 ./ec2FleetCompare``` or similiar for windows.
 
