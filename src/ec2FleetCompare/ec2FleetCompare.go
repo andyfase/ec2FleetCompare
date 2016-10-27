@@ -492,9 +492,9 @@ func doFilter(ec2 Ec2, region string, instanceCount int, minInstanceCount int, m
 		// sort prices will be whatever the sort prices set * num instances required (biggest to meet either mem or cpu limits)
 		if (instanceCount == 1) {
 			if (float64(minFleetMem) / ec2.Instance[i].Specs.Mem) > float64(minFleetCPU / ec2.Instance[i].Specs.Cpu) {
-				numServers = roundUp(float64(minFleetMem) / ec2.Instance[i].Specs.Mem)
+				numServers = roundUp(float64(minFleetMem) / float64(ec2.Instance[i].Specs.Mem))
 			} else {
-				numServers = roundUp(float64(minFleetCPU / ec2.Instance[i].Specs.Cpu))
+				numServers = roundUp(float64(minFleetCPU) / float64(ec2.Instance[i].Specs.Cpu))
 			}
 			if numServers < 1 {
 				numServers = 1
